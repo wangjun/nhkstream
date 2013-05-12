@@ -9,15 +9,16 @@ Pythonのモジュールとして以下を使用
 - python 2.x         
 - python-dateuti 1.x (http://labix.org/python-dateutil)
 - BeautifulSoup      (http://www.crummy.com/software/BeautifulSoup)
+- mutagen            (https://code.google.com/p/mutagen)
 
-MP3への変換に以下のソフトを使用
+MP3への変換に以下のソフトを使用。パスを通すかnhkstream.pyと同じディレクトリにおく。
 
 - flvstreamer  (http://savannah.nongnu.org/projects/flvstreamer)
 - ffmpeg       (http://www.ffmpeg.org)
-- eyeD3        (http://eyed3.nicfit.net)
 
 
 History
 -------
-ver 1.0
+ver 1.1
 2013.05.11 initial version
+2013.05.12 タグ付けをeyeD3からmutagen使用に変更。

@@ -1,5 +1,6 @@
 # coding:utf-8
-import os, os.path
+import os, os.path, sys, codecs
+import mimetypes
 import shutil, tempfile
 from subprocess import check_call, STDOUT, PIPE, check_output
 import urllib2
@@ -8,6 +9,8 @@ from datetime import datetime
 from dateutil.parser import parse
 from dateutil.relativedelta import *
 from BeautifulSoup import BeautifulSoup
+from mutagen.mp3 import MP3
+from mutagen.id3 import ID3, APIC, TIT2, TPE1, TRCK, TALB, TCON, TYER
 
 ## ----------------------------------------------------------------------------
 
@@ -17,18 +20,29 @@ task_kouza = [
     , 'kaiwa'       # ラジオ英会話
     , 'kouryaku'    # 攻略！英語リスニング
     , 'business1'   # 入門ビジネス英会話
-    , 'business2'   # 実践ビジネス英語
-    , 'basic1'      # 基礎英語１
-    , 'basic2'      # 基礎英語２
-    , 'basic3'      # 基礎英語３
+#    , 'business2'   # 実践ビジネス英語
+#    , 'basic1'      # 基礎英語１
+#    , 'basic2'      # 基礎英語２
+#    , 'basic3'      # 基礎英語３
 #    , 'yomu'        # 英語で読む村上春樹
     ]
 
 # 出力ディレクトリ
-OUTBASE = os.path.join(os.path.expanduser('~'), 'Music', 'NHKtest')
+OUTBASE = os.path.join(os.path.expanduser('~'), 'Music', 'NHK')
 
+# ffmpegとflvstreamerのパス
+scriptbase = os.path.dirname(__file__)
+flvstreamer = os.path.join(scriptbase, 'flvstreamer.exe')
+ffmpeg = os.path.join(scriptbase, 'ffmpeg.exe')
 
 ## 以下スクリプト部分(編集する必要なし)--------------------------------------------
+sys.stdout = codecs.getwriter(sys.getfilesystemencoding())(sys.stdout)
+
+## 同じディレクトリになければ、コマンドとして実行
+if not os.path.isfile(ffmpeg):
+    ffmpeg = 'ffmpeg'
+if not os.path.isfile(flvstreamer):
+    flvstremer = 'flvstremer'
 
 ## 基本URL
 XMLURL="https://cgi2.nhk.or.jp/gogaku/english/{kouza}/{scramble}/listdataflv.xml"
@@ -47,7 +61,17 @@ KOUZA_INFO = {'timetrial' : [u'英会話タイムトライアル', 9105],
               'basic2'    : [u'基礎英語２',             9115],
               'basic3'    : [u'基礎英語３',             5163],
               'yomu'      : [u'英語で読む村上春樹',     9497]}
-              
+
+## UTF-8以外の環境で生じるユニコード問題への対処関数
+def encodecmd(cmd):
+    systemcode = sys.getfilesystemencoding()
+        
+    if isinstance(cmd, list):
+        encodedcmd = [s.encode(systemcode) for s in cmd]
+    else:
+        encodedcmd = cmd.encode(systemcode)
+    return encodedcmd
+
 ## スクランブル文字列の取得
 def getscramble():
     today = datetime.today()
@@ -63,6 +87,37 @@ def getscramble():
     else:
         raise ValueError, u"スクランブル文字列がWikiにありません。"
     return scramble
+
+def setmp3tag(mp3file, image=None, title=None, album=None, artist=None, track_num=None,
+                year=None, genre=None):
+    audio = MP3(mp3file, ID3=ID3)
+    try:
+        audio.add_tag()
+    except:
+        pass
+
+    if image is not None:
+        with open(image, 'rb') as f:        
+            audio.tags.add(APIC(
+                encoding=3,
+                mime='image/jpeg',
+                type=3,
+                desc=u'Cover Picture',
+                data=f.read()))
+    if title is not None:
+        audio.tags.add(TIT2(encoding=3, text=title))
+    if album is not None:
+        audio.tags.add(TALB(encoding=3, text=album))
+    if artist is not None:
+        audio.tags.add(TPE1(encoding=3, text=artist))
+    if track_num is not None:
+        audio.tags.add(TRCK(encoding=3, text=str(track_num)))
+    if genre is not None:
+        audio.tags.add(TCON(encoding=3, text=genre))
+    if year is not None:
+        audio.tags.add(TYER(encoding=3, text=str(year)))
+    audio.save()
+
 
 ## メイン関数
 def streamedump(kouza):
@@ -115,13 +170,12 @@ def streamedump(kouza):
 
     # ジャケット画像の取得
     imgurl = IMGURL.format(kouzano=kouzano, date=bookdate.strftime('%m%Y'))
-    img = os.path.join(DATADIR, os.path.basename(imgurl))
+    imgfile = os.path.join(DATADIR, os.path.basename(imgurl))
     imgdata = urllib2.urlopen(imgurl)
-    imgfile = open(img, 'wb')
-    imgfile.write(imgdata.read())
+    with open(imgfile, 'wb') as f:
+        f.write(imgdata.read())
     imgdata.close()
-    imgfile.close()
-
+        
     # ファイルをダウンロードしてMP3に変換 (flvwtreamer,ffmpegを使用)
     FNULL = open(os.devnull, 'w')
     for mp4file, date in zip(file_list, date_list):
@@ -132,21 +186,20 @@ def streamedump(kouza):
             print mp3file + ' still exist. skip.'
             continue
         else:
-            print 'download '+ mp3file
-            
-        check_call(['flvstreamer', '-r', mp4url, '-o', tmpfile], stdout=FNULL, stderr=STDOUT)
-        check_call(['ffmpeg', '-i', tmpfile, '-vn', '-acodec', 'libmp3lame', '-ar', '22050', '-ac', '1', '-ab', '48k', mp3file],
+            print 'download ' + mp3file
+        
+        check_call(encodecmd([flvstreamer, '-r', mp4url, '-o', tmpfile]), stdout=FNULL, stderr=STDOUT)
+        check_call(encodecmd([ffmpeg, '-i', tmpfile, '-vn', '-acodec', 'libmp3lame', '-ar', '22050', '-ac', '1', '-ab', '48k', mp3file]),
                    stdout=FNULL, stderr=STDOUT)
 
-        # MP3ファイルにタグを設定 (eyeD3使用)
-        check_call(['eyeD3',
-                    mp3file,
-                   '-a', u'NHK',
-                   '-A', albumname,
-                   '-t', u'{kouzaname}_{date}'.format(kouzaname=kouzaname, date=date.strftime('%Y_%m_%d')),
-                   '-G', u'101',
-                   '-Y', str(date.year),
-                   '--add-image', unicode(img+':FRONT_COVER')], stdout=FNULL, stderr=STDOUT)
+        # MP3ファイルにタグを設定 (mutagen)
+        setmp3tag(mp3file,
+                    image = imgfile,
+                    title = u'{kouzaname}_{date}'.format(kouzaname=kouzaname, date=date.strftime('%Y_%m_%d')),
+                    artist = u'NHK',
+                    album = albumname,
+                    genre = u'Speech',
+                    year = date.year)
 
 if __name__ == '__main__':
     for kouza in task_kouza:
