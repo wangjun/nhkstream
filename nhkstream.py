@@ -42,7 +42,7 @@ sys.stdout = codecs.getwriter(sys.getfilesystemencoding())(sys.stdout)
 if not os.path.isfile(ffmpeg):
     ffmpeg = 'ffmpeg'
 if not os.path.isfile(flvstreamer):
-    flvstremer = 'flvstremer'
+    flvstreamer = 'flvstreamer'
 
 ## 基本URL
 XMLURL="https://cgi2.nhk.or.jp/gogaku/english/{kouza}/{scramble}/listdataflv.xml"
@@ -65,7 +65,7 @@ KOUZA_INFO = {'timetrial' : [u'英会話タイムトライアル', 9105],
 ## UTF-8以外の環境で生じるユニコード問題への対処関数
 def encodecmd(cmd):
     systemcode = sys.getfilesystemencoding()
-        
+
     if isinstance(cmd, list):
         encodedcmd = [s.encode(systemcode) for s in cmd]
     else:
@@ -150,7 +150,7 @@ def streamedump(kouza):
     temp = str(temp.contents[2]).strip()
     startdate = parse(temp[6:16])
     enddate = parse(temp[19:])
-            
+
     if date_list[0]<startdate:
         bookdate = date_list[0] + relativedelta(months=-1,day=1)
     elif date_list[0]>enddate:
@@ -187,7 +187,7 @@ def streamedump(kouza):
             continue
         else:
             print 'download ' + mp3file
-        
+
         check_call(encodecmd([flvstreamer, '-r', mp4url, '-o', tmpfile]), stdout=FNULL, stderr=STDOUT)
         check_call(encodecmd([ffmpeg, '-i', tmpfile, '-vn', '-acodec', 'libmp3lame', '-ar', '22050', '-ac', '1', '-ab', '48k', mp3file]),
                    stdout=FNULL, stderr=STDOUT)
