@@ -30,9 +30,12 @@ task_kouza = [
 # 出力ディレクトリ
 OUTBASE = os.path.join(os.path.expanduser('~'), 'Music', 'NHK')
 
-# ffmpegとflvstreamerのパス
+# iTuensに追加したい場合
+ITUENSADD = os.path.join(os.path.expanduser('~'), u'Music', u'iTunes', u'iTunes Media', u'iTunes に自動的に追加')
+
+# ffmpegとrtmpdumpのパス
 scriptbase = os.path.dirname(__file__)
-flvstreamer = os.path.join(scriptbase, 'flvstreamer.exe')
+rtmpdump = os.path.join(scriptbase, 'rtmpdump.exe')
 ffmpeg = os.path.join(scriptbase, 'ffmpeg.exe')
 
 ## 以下スクリプト部分(編集する必要なし)--------------------------------------------
@@ -41,12 +44,12 @@ sys.stdout = codecs.getwriter(sys.getfilesystemencoding())(sys.stdout)
 ## 同じディレクトリになければ、コマンドとして実行
 if not os.path.isfile(ffmpeg):
     ffmpeg = 'ffmpeg'
-if not os.path.isfile(flvstreamer):
-    flvstreamer = 'flvstreamer'
+if not os.path.isfile(rtmpdump):
+    rtmpdump = 'rtmpdump'
 
 ## 基本URL
-XMLURL="https://cgi2.nhk.or.jp/gogaku/english/{kouza}/{scramble}/listdataflv.xml"
-MP4URL='rtmp://flv.nhk.or.jp/ondemand/mp4:flv/gogaku/streaming/mp4/{scramble}/{mp4file}'
+XMLURL="https://cgi2.nhk.or.jp/gogaku/english/{kouza}/listdataflv.xml"
+MP4URL='rtmpe://flvs.nhk.or.jp:80/ondemand/mp4:flv/gogaku-stream/mp4/{mp4file}'
 IMGURL='https://www.nhk-book.co.jp/image/text/420/{kouzano:05d}{date}.jpg'
 BOOKURL='https://www.nhk-book.co.jp/shop/main.jsp?trxID=C5010101&webCode={kouzano:05d}{date}'
 WIKIURL='http://cdn47.atwikiimg.com/jakago/pub/scramble.xml'
@@ -65,7 +68,7 @@ KOUZA_INFO = {'timetrial' : [u'英会話タイムトライアル', 9105],
 ## UTF-8以外の環境で生じるユニコード問題への対処関数
 def encodecmd(cmd):
     systemcode = sys.getfilesystemencoding()
-
+        
     if isinstance(cmd, list):
         encodedcmd = [s.encode(systemcode) for s in cmd]
     else:
@@ -124,10 +127,10 @@ def streamedump(kouza):
     kouzaname, kouzano = KOUZA_INFO[kouza]
     
     # スクランブル文字列の取得
-    scramble = getscramble()
+#    scramble = getscramble()
 
     # ファイルリストの取得
-    xmlfile = urllib2.urlopen(XMLURL.format(kouza=kouza, scramble=scramble))
+    xmlfile = urllib2.urlopen(XMLURL.format(kouza=kouza))
     tree = etree.parse(xmlfile)
     file_list = []
     date_list = []
@@ -150,7 +153,7 @@ def streamedump(kouza):
     temp = str(temp.contents[2]).strip()
     startdate = parse(temp[6:16])
     enddate = parse(temp[19:])
-
+            
     if date_list[0]<startdate:
         bookdate = date_list[0] + relativedelta(months=-1,day=1)
     elif date_list[0]>enddate:
@@ -176,10 +179,10 @@ def streamedump(kouza):
         f.write(imgdata.read())
     imgdata.close()
         
-    # ファイルをダウンロードしてMP3に変換 (flvwtreamer,ffmpegを使用)
+    # ファイルをダウンロードしてMP3に変換 (rtmpdump,ffmpegを使用)
     FNULL = open(os.devnull, 'w')
     for mp4file, date in zip(file_list, date_list):
-        mp4url = MP4URL.format(scramble=scramble, mp4file=mp4file)
+        mp4url = MP4URL.format(mp4file=mp4file)
         tmpfile = os.path.join(DATADIR,u'{kouza}_{date}.mp4'.format(kouza=kouzaname, date=date.strftime('%Y_%m_%d')))
         mp3file = os.path.join(OUTDIR, u'{kouza}_{date}.mp3'.format(kouza=kouzaname, date=date.strftime('%Y_%m_%d')))
         if os.path.isfile(mp3file):
@@ -187,8 +190,7 @@ def streamedump(kouza):
             continue
         else:
             print 'download ' + mp3file
-
-        check_call(encodecmd([flvstreamer, '-r', mp4url, '-o', tmpfile]), stdout=FNULL, stderr=STDOUT)
+        check_call(encodecmd([rtmpdump, '-r', mp4url, '-o', tmpfile]), stdout=FNULL, stderr=STDOUT)
         check_call(encodecmd([ffmpeg, '-i', tmpfile, '-vn', '-acodec', 'libmp3lame', '-ar', '22050', '-ac', '1', '-ab', '48k', mp3file]),
                    stdout=FNULL, stderr=STDOUT)
 
@@ -200,6 +202,10 @@ def streamedump(kouza):
                     album = albumname,
                     genre = u'Speech',
                     year = date.year)
+
+        # 必要ならItuensに追加        
+        if os.path.isdir(ITUENSADD):
+            shutil.copy(mp3file, ITUENSADD)
 
 if __name__ == '__main__':
     for kouza in task_kouza:
