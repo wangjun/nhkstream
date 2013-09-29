@@ -19,7 +19,14 @@ MP3への変換に以下のソフトを使用。パスを通すかnhkstream.py�
 
 History
 -------
-ver 1.2
-2013.05.11 initial version
-2013.05.12 タグ付けをeyeD3からmutagen使用に変更。
-2013.08.11 配信方式の変更に対応
+
+- 2013.05.11 initial version
+- 2013.05.12 タグ付けをeyeD3からmutagen使用に変更。
+- 2013.08.11 配信方式の変更に対応
+
+Author Information
+-------------------
+tmiyachi 
+
+- https://bitbucket.org/tmiyachi
+- https://github.com/tmiyachi
