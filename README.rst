@@ -27,9 +27,6 @@ History
 Author Information
 -------------------
 tmiyachi 
-<<<<<<< HEAD
 
-=======
->>>>>>> df6c7612cd1ca0f415ed5908e2e12f422ea74270
 - https://bitbucket.org/tmiyachi
 - https://github.com/tmiyachi
