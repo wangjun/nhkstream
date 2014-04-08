@@ -17,7 +17,8 @@ from mutagen.id3 import ID3, APIC, TIT2, TPE1, TRCK, TALB, TCON, TYER
 # ダウンロードしたい講座名を列挙
 task_kouza = [
       'timetrial'   # 英会話タイムトライアル
-    , 'kaiwa'       # ラジオ英会話
+      ,'enjoy'      # エンジョイ・シンプル・イングリッシュ
+#    , 'kaiwa'       # ラジオ英会話
     , 'kouryaku'    # 攻略！英語リスニング
     , 'business1'   # 入門ビジネス英会話
 #    , 'business2'   # 実践ビジネス英語
@@ -25,6 +26,7 @@ task_kouza = [
 #    , 'basic2'      # 基礎英語２
 #    , 'basic3'      # 基礎英語３
 #    , 'yomu'        # 英語で読む村上春樹
+
     ]
 
 # 出力ディレクトリ
@@ -33,9 +35,9 @@ OUTBASE = os.path.join(os.path.expanduser('~'), 'Music', 'NHK')
 # iTuensに追加したい場合
 ITUENSADD = os.path.join(os.path.expanduser('~'), u'Music', u'iTunes', u'iTunes Media', u'iTunes に自動的に追加')
 
-# ffmpegとrtmpdumpのパス
+# ffmpegとflvstreamerのパス
 scriptbase = os.path.dirname(__file__)
-rtmpdump = os.path.join(scriptbase, 'rtmpdump.exe')
+flvstreamer = os.path.join(scriptbase, 'rtmpdump.exe')
 ffmpeg = os.path.join(scriptbase, 'ffmpeg.exe')
 
 ## 以下スクリプト部分(編集する必要なし)--------------------------------------------
@@ -43,12 +45,13 @@ sys.stdout = codecs.getwriter(sys.getfilesystemencoding())(sys.stdout)
 
 ## 同じディレクトリになければ、コマンドとして実行
 if not os.path.isfile(ffmpeg):
-    ffmpeg = 'ffmpeg'
-if not os.path.isfile(rtmpdump):
-    rtmpdump = 'rtmpdump'
+    ffmpeg = 'C:\Users\miyachi\Documents\nhkstream\ffmpeg'
+if not os.path.isfile(flvstreamer):
+    flvstremer = 'flvstremer'
+    #flvstreamer = 'C:\Users\miyachi\Documents\nhkstream\rtmpdump'
 
 ## 基本URL
-XMLURL="https://cgi2.nhk.or.jp/gogaku/english/{kouza}/listdataflv.xml"
+XMLURL="https://cgi2.nhk.or.jp/gogaku/st/xml/english/{kouza}/listdataflv.xml"
 MP4URL='rtmpe://flvs.nhk.or.jp:80/ondemand/mp4:flv/gogaku-stream/mp4/{mp4file}'
 IMGURL='https://www.nhk-book.co.jp/image/text/420/{kouzano:05d}{date}.jpg'
 BOOKURL='https://www.nhk-book.co.jp/shop/main.jsp?trxID=C5010101&webCode={kouzano:05d}{date}'
@@ -63,7 +66,8 @@ KOUZA_INFO = {'timetrial' : [u'英会話タイムトライアル', 9105],
               'basic1'    : [u'基礎英語１',             9107],
               'basic2'    : [u'基礎英語２',             9115],
               'basic3'    : [u'基礎英語３',             5163],
-              'yomu'      : [u'英語で読む村上春樹',     9497]}
+              'yomu'      : [u'英語で読む村上春樹',     9497],
+              'enjoy'     : [u'エンジョイ・シンプル・イングリッシュ', 9515]}
 
 ## UTF-8以外の環境で生じるユニコード問題への対処関数
 def encodecmd(cmd):
@@ -138,7 +142,7 @@ def streamedump(kouza):
     for item in tree.findall('music'):
         file_list.append(item.get('file'))
         file_date = datetime.strptime(item.get('hdate').encode('utf-8'), u'%m月%d日放送分'.encode('utf-8'))
-        if file_date.month == 12 and today.mont==1:
+        if file_date.month == 12 and today.month==1:
             file_date = file_date + relativedelta(year=today.year-1)
         else:
             file_date = file_date + relativedelta(year=today.year)
@@ -179,9 +183,10 @@ def streamedump(kouza):
         f.write(imgdata.read())
     imgdata.close()
         
-    # ファイルをダウンロードしてMP3に変換 (rtmpdump,ffmpegを使用)
+    # ファイルをダウンロードしてMP3に変換 (flvwtreamer,ffmpegを使用)
     FNULL = open(os.devnull, 'w')
     for mp4file, date in zip(file_list, date_list):
+#        mp4url = MP4URL.format(scramble=scramble, mp4file=mp4file)
         mp4url = MP4URL.format(mp4file=mp4file)
         tmpfile = os.path.join(DATADIR,u'{kouza}_{date}.mp4'.format(kouza=kouzaname, date=date.strftime('%Y_%m_%d')))
         mp3file = os.path.join(OUTDIR, u'{kouza}_{date}.mp3'.format(kouza=kouzaname, date=date.strftime('%Y_%m_%d')))
@@ -190,7 +195,8 @@ def streamedump(kouza):
             continue
         else:
             print 'download ' + mp3file
-        check_call(encodecmd([rtmpdump, '-r', mp4url, '-o', tmpfile]), stdout=FNULL, stderr=STDOUT)
+        print mp4url
+        check_call(encodecmd([flvstreamer, '-r', mp4url, '-o', tmpfile]), stdout=FNULL, stderr=STDOUT)
         check_call(encodecmd([ffmpeg, '-i', tmpfile, '-vn', '-acodec', 'libmp3lame', '-ar', '22050', '-ac', '1', '-ab', '48k', mp3file]),
                    stdout=FNULL, stderr=STDOUT)
 

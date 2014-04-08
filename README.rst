@@ -13,20 +13,15 @@ Pythonのモジュールとして以下を使用
 
 MP3への変換に以下のソフトを使用。パスを通すかnhkstream.pyと同じディレクトリにおく。
 
-- rtmpdump     
+- flvstreamer  (http://savannah.nongnu.org/projects/flvstreamer)
 - ffmpeg       (http://www.ffmpeg.org)
 
 
 History
 -------
-
-- 2013.05.11 initial version
-- 2013.05.12 タグ付けをeyeD3からmutagen使用に変更。
-- 2013.08.11 配信方式の変更に対応
-
-Author Information
--------------------
-tmiyachi 
-
-- https://bitbucket.org/tmiyachi
-- https://github.com/tmiyachi
+ver 1.0
+2013.05.11 initial version
+ver 1.1
+2013.05.12 タグ付けをeyeD3からmutagen使用に変更。
+ver 1.2
+2014.04.08 2014/04からの変更に対応。
